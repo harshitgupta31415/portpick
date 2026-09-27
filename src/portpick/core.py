@@ -77,3 +77,29 @@ def reserve_port(host: str = "127.0.0.1", port: int = 0) -> Iterator[tuple[int, 
         yield selected, sock
     finally:
         sock.close()
+
+
+@contextmanager
+def reserve_ports(
+    count: int,
+    host: str = "127.0.0.1",
+) -> Iterator[list[tuple[int, socket.socket]]]:
+    """Reserve several distinct ephemeral TCP ports as one atomic resource.
+
+    Every returned socket remains bound until the context exits. If any bind
+    fails, sockets opened earlier in the operation are still closed.
+    """
+
+    if count < 1:
+        raise PortRangeError("count must be at least 1")
+
+    reservations: list[tuple[int, socket.socket]] = []
+    try:
+        for _ in range(count):
+            sock = socket.socket(_socket_family(host), socket.SOCK_STREAM)
+            sock.bind((host, 0))
+            reservations.append((int(sock.getsockname()[1]), sock))
+        yield reservations
+    finally:
+        for _, sock in reversed(reservations):
+            sock.close()
