@@ -1,7 +1,7 @@
 import socket
 import unittest
 
-from portpick.core import PortRangeError, find_available_ports, is_available, reserve_port
+from portpick.core import PortRangeError, find_available_ports, is_available, reserve_port, reserve_ports
 
 
 class PortPickTests(unittest.TestCase):
@@ -21,6 +21,18 @@ class PortPickTests(unittest.TestCase):
         ports = find_available_ports(40000, 50000, count=3)
         self.assertEqual(len(ports), 3)
         self.assertEqual(len(set(ports)), 3)
+
+    def test_reserves_multiple_ports_until_context_exit(self) -> None:
+        with reserve_ports(3) as reservations:
+            ports = [port for port, _ in reservations]
+            self.assertEqual(len(set(ports)), 3)
+            self.assertTrue(all(not is_available("127.0.0.1", port) for port in ports))
+        self.assertTrue(all(is_available("127.0.0.1", port) for port in ports))
+
+    def test_rejects_empty_multi_port_reservation(self) -> None:
+        with self.assertRaises(PortRangeError):
+            with reserve_ports(0):
+                pass
 
     def test_rejects_invalid_ranges(self) -> None:
         with self.assertRaises(PortRangeError):

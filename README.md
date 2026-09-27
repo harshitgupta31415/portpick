@@ -52,6 +52,19 @@ with reserve_port() as (port, socket):
 The socket remains bound until the context exits. Advanced callers can pass
 its descriptor to a child process or use it directly in a test server.
 
+Reserve several ports together for integration tests that start multiple
+services:
+
+```python
+from portpick import reserve_ports
+
+with reserve_ports(3) as reservations:
+    api_port, worker_port, metrics_port = [port for port, _ in reservations]
+    # Start services while every selected port is still held by this process.
+```
+
+All sockets are released on exit, including when setup raises an exception.
+
 ## Development
 
 ```bash
